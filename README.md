@@ -10,8 +10,8 @@ Playlist-do-momento
 | Nome | GitHub |
 |------|--------|
 | [Leticia Melo] | [@LeticiaMelo2] |
-| [Gioovanna Rocha] | [@georomeoz] |
-| [Geovana Romeo] | [@giovannamrocha] |
+| [Giovanna Rocha] | [@giovannamrocha] |
+| [Geovana Romeo] | [@geovanaromeoz] |
 
 ## Arquitetura
 > *A ser preenchido na Aula 6*
