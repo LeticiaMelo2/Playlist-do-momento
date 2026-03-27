@@ -13,5 +13,4 @@ Playlist-do-momento
 | [Gioovanna Rocha] | [@georomeoz] |
 | [Geovana Romeo] | [@giovannamrocha] |
 
-## Arquitetura
-> *A ser preenchido na Aula 6*
+
