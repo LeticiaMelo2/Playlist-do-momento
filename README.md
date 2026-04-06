@@ -15,3 +15,7 @@ Playlist-do-momento
 
 ## Arquitetura
 > *A ser preenchido na Aula 6*
+<<<<<< setup/projeto
+=======
+
+>>>>>> main
