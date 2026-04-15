@@ -14,8 +14,15 @@ Playlist-do-momento
 | [Geovana Romeo] | [@geovanaromeoz] |
 
 ## Arquitetura
+<<< setup/projeto
 > *A ser preenchido na Aula 6*
 <<<<<< setup/projeto
 =======
+=======
+<img width="2815" height="3860" alt="Personalized Playlist-2026-04-10-233718" src="https://github.com/user-attachments/assets/fc3a48a9-a542-46ea-81d3-7b5d531e9539" />
 
->>>>>> main
+docs: adiciona diagrama de arquitetura
+
+main
+
+>>> main
