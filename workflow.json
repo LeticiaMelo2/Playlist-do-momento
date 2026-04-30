@@ -1,0 +1,438 @@
+{
+  "name": "Playlist do Momento 🎧 (Gemini - Revisado)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🎧 Playlist do Momento",
+        "formDescription": "Conte como você está e onde está — vamos montar a vibe perfeita pra esse momento.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Qual é o seu humor agora?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Feliz"
+                  },
+                  {
+                    "option": "Triste"
+                  },
+                  {
+                    "option": "Animado"
+                  },
+                  {
+                    "option": "Calmo"
+                  },
+                  {
+                    "option": "Focado"
+                  },
+                  {
+                    "option": "Romântico"
+                  },
+                  {
+                    "option": "Melancólico"
+                  },
+                  {
+                    "option": "Energizado"
+                  },
+                  {
+                    "option": "Nostálgico"
+                  },
+                  {
+                    "option": "Ansioso"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Em qual cidade você está?",
+              "placeholder": "Ex: São Paulo",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "c1ae6df3-1805-4737-8d05-f82937340d6b",
+      "name": "📝 Formulário - Humor & Cidade",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -272,
+        -80
+      ],
+      "webhookId": "fb1afd3a-12b8-48a2-a27a-eb829bc88e38"
+    },
+    {
+      "parameters": {
+        "url": "https://geocoding-api.open-meteo.com/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json['Em qual cidade você está?'] }}"
+            },
+            {
+              "name": "count",
+              "value": "1"
+            },
+            {
+              "name": "language",
+              "value": "pt"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "27ea09ce-57c7-4706-8d89-49d4576b5318",
+      "name": "🌍 Buscar Coordenadas (Geocoding)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -48,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.results[0].latitude }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.results[0].longitude }}"
+            },
+            {
+              "name": "current",
+              "value": "temperature_2m,weather_code,precipitation,relative_humidity_2m,wind_speed_10m"
+            },
+            {
+              "name": "timezone",
+              "value": "auto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a9d8a0ff-29f6-4bb0-8c2f-2cd6ac9874d5",
+      "name": "🌦️ Consultar Clima (Open-Meteo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Processa entradas do formulário e dados do clima ===\nconst formData = $('📝 Formulário - Humor & Cidade').item.json;\nconst geoData  = $('🌍 Buscar Coordenadas (Geocoding)').item.json;\nconst weatherData = $input.item.json;\n\nconst humor = formData['Qual é o seu humor agora?'];\nconst cidadeInformada = formData['Em qual cidade você está?'];\n\n// Validação: cidade encontrada e temperatura disponível?\nconst sucesso = (geoData.results && geoData.results.length > 0 && weatherData.current && typeof weatherData.current.temperature_2m === 'number');\n\nlet cidadeOficial = null;\nlet pais = null;\nlet estado = null;\nlet temperatura = null;\nlet weatherCode = null;\nlet precipitacao = null;\nlet umidade = null;\nlet vento = null;\nlet descricaoClima = 'Dados indisponíveis';\n\nif (sucesso) {\n  cidadeOficial = geoData.results[0].name;\n  pais   = geoData.results[0].country  || '';\n  estado = geoData.results[0].admin1   || '';\n\n  // Dados climáticos atuais\n  const current = weatherData.current || {};\n  temperatura  = current.temperature_2m;\n  weatherCode  = current.weather_code;\n  precipitacao = current.precipitation;\n  umidade      = current.relative_humidity_2m;\n  vento        = current.wind_speed_10m;\n\n  // Mapeamento dos códigos da Open-Meteo (WMO Weather codes)\n  const weatherDescriptions = {\n    0: 'Céu limpo ☀️', 1: 'Predominantemente ensolarado 🌤️', 2: 'Parcialmente nublado ⛅', 3: 'Nublado ☁️',\n    45: 'Neblina 🌫️', 48: 'Neblina com geada 🌫️❄️', 51: 'Garoa fraca 🌦️', 53: 'Garoa moderada 🌦️',\n    55: 'Garoa intensa 🌧️', 61: 'Chuva fraca 🌧️', 63: 'Chuva moderada 🌧️', 65: 'Chuva forte ⛈️',\n    71: 'Neve fraca 🌨️', 73: 'Neve moderada 🌨️', 75: 'Neve forte ❄️', 80: 'Pancadas de chuva fracas 🌦️',\n    81: 'Pancadas de chuva moderadas 🌧️', 82: 'Pancadas de chuva fortes ⛈️', 95: 'Trovoada ⛈️',\n    96: 'Trovoada com granizo ⛈️', 99: 'Trovoada com granizo forte ⛈️'\n  };\n  descricaoClima = weatherDescriptions[weatherCode] || 'Condição desconhecida';\n}\n\nreturn [{\n  json: {\n    sucesso, // Nova variável booleana para indicar sucesso na busca\n    humor,\n    cidadeInformada,\n    cidadeOficial,\n    estado,\n    pais,\n    temperatura,\n    weatherCode,\n    descricaoClima,\n    precipitacao,\n    umidade,\n    vento\n  }\n}];"
+      },
+      "id": "61050265-f3be-4266-89cb-b104de48ab45",
+      "name": "⚙️ Processar Dados Climáticos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-sucesso-busca",
+              "leftValue": "={{ $json.sucesso }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "81333f5e-1e2f-4fde-857b-9500a1302c6c",
+      "name": "❓ Sucesso na Busca?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "respostaFinal",
+              "value": "=🎧 *PLAYLIST DO MOMENTO*\n\n📍 Local: {{ $('⚙️ Processar Dados Climáticos').item.json.cidadeOficial }}, {{ $('⚙️ Processar Dados Climáticos').item.json.pais }}\n🌡️ Clima: {{ $('⚙️ Processar Dados Climáticos').item.json.descricaoClima }} — {{ $('⚙️ Processar Dados Climáticos').item.json.temperatura }}°C\n😊 Humor: {{ $('⚙️ Processar Dados Climáticos').item.json.humor }}\n\n🎵 **Playlist ideal:* {{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.tipoPlaylist }} {{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.emoji }}\n\n💡 *Por quê?\n{{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.justificativa }}\n\n🔎 **Busca no Spotify:* \"{{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.sugestaoBuscaSpotify }}\"\n\n🎶 *Comece com estas músicas:*\n• {{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.musicasSugeridas[0] }}\n• {{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.musicasSugeridas[1] }}\n• {{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.musicasSugeridas[2] }}\n\nAproveite o momento ✨",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "tipoPlaylist",
+              "value": "={{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.tipoPlaylist }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "sugestaoBuscaSpotify",
+              "value": "={{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.sugestaoBuscaSpotify }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "justificativa",
+              "value": "={{ $('🤖 IA - Curadoria Musical (Gemini)').item.json.justificativa }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "801d620d-a406-468d-a0a0-da445c654acd",
+      "name": "🎵 Formatar Resposta da IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1056,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "🎧 Sua Playlist do Momento está pronta!",
+        "completionMessage": "={{ $('🎵 Formatar Resposta da IA').item.json.respostaFinal }}",
+        "options": {}
+      },
+      "id": "7dc98361-de1f-46e6-a5e7-fc477318c405",
+      "name": "📤 Exibir Playlist",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -80
+      ],
+      "webhookId": "playlist-momento-out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "errorMsg",
+              "name": "respostaFinal",
+              "value": "Ops, não conseguimos encontrar dados para esta cidade ou o clima. Tente novamente com outra cidade ou verifique a ortografia! 😔",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2cf26ed-6016-4127-9e5f-8a6929c455b2",
+      "name": "📝 Gerar Mensagem de Erro",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Ocorreu um erro 😔",
+        "completionMessage": "={{ $('📝 Gerar Mensagem de Erro').item.json.respostaFinal }}",
+        "options": {}
+      },
+      "id": "4cae4ad5-4002-4699-9a16-b677a7cf19ae",
+      "name": "📤 Exibir Mensagem de Erro",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        128
+      ],
+      "webhookId": "playlist-momento-error-out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        832,
+        -224
+      ],
+      "id": "fccaa2cd-25ff-47ff-983a-bc10920f17ba",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        -32
+      ],
+      "id": "2716606c-d447-45ab-a691-c482ee6064b1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kZLRSGVYnqIrWMz4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📝 Formulário - Humor & Cidade": {
+      "main": [
+        [
+          {
+            "node": "🌍 Buscar Coordenadas (Geocoding)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌍 Buscar Coordenadas (Geocoding)": {
+      "main": [
+        [
+          {
+            "node": "🌦️ Consultar Clima (Open-Meteo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌦️ Consultar Clima (Open-Meteo)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Processar Dados Climáticos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Processar Dados Climáticos": {
+      "main": [
+        [
+          {
+            "node": "❓ Sucesso na Busca?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Sucesso na Busca?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📝 Gerar Mensagem de Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎵 Formatar Resposta da IA": {
+      "main": [
+        [
+          {
+            "node": "📤 Exibir Playlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Gerar Mensagem de Erro": {
+      "main": [
+        [
+          {
+            "node": "📤 Exibir Mensagem de Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "🎵 Formatar Resposta da IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d088f6fb-bd50-4cc7-8c0e-61c68de3d92f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d23487d9a2303f8c578d7661ec71e0c995822bef754d0aa488e928d8f19e89e0"
+  },
+  "id": "ATVmxqL1Qi8bQHbd",
+  "tags": []
+}
